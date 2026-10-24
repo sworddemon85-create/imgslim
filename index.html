@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>imgslim — 纯前端图片压缩工具</title>
+  <meta name="description" content="imgslim 是一个纯前端的图片压缩工具：拖入图片即可压缩、转换格式、批量打包下载，所有处理都在浏览器本地完成，图片不会上传到任何服务器。" />
+  <meta property="og:title" content="imgslim — 纯前端图片压缩工具" />
+  <meta property="og:description" content="拖入即压缩，图片永不上传。零依赖、开源、开箱即用。" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%9C%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <h1 class="logo">🗜️ imgslim</h1>
+      <p class="tagline">拖入即压缩 · 图片永不上传 · 纯浏览器本地处理</p>
+      <a class="github-link" href="https://github.com/sworddemon85-create/imgslim" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="dropzone" class="dropzone" aria-label="拖拽或点击选择图片">
+      <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+        <path d="M21 15l-5-5L5 21"></path>
+      </svg>
+      <p class="dropzone-title">把图片拖到这里，或粘贴（Ctrl+V）</p>
+      <p class="dropzone-sub">支持 JPG / PNG / WebP，可多选、可批量</p>
+      <button id="browse-btn" class="btn btn-primary" type="button">选择图片</button>
+      <input id="file-input" type="file" accept="image/*" multiple hidden />
+    </section>
+
+    <section class="settings" aria-label="压缩设置">
+      <label class="setting">
+        <span class="setting-label">压缩质量 <b id="quality-value">80%</b></span>
+        <input id="quality" type="range" min="0.1" max="1" step="0.05" value="0.8" />
+      </label>
+      <label class="setting">
+        <span class="setting-label">输出格式</span>
+        <select id="format">
+          <option value="auto" selected>自动（与原图一致）</option>
+          <option value="jpeg">JPEG</option>
+          <option value="png">PNG</option>
+          <option value="webp">WebP</option>
+        </select>
+      </label>
+      <label class="setting">
+        <span class="setting-label">最大边长（px）</span>
+        <input id="max-dim" type="number" min="16" step="16" value="4096" placeholder="不缩放填 0 以上的大值" />
+      </label>
+    </section>
+
+    <section class="results-panel" hidden>
+      <div class="results-head">
+        <p id="summary" class="summary"></p>
+        <div class="results-actions">
+          <button id="download-all" class="btn btn-primary" type="button" disabled>打包下载 ZIP</button>
+          <button id="clear-all" class="btn btn-ghost" type="button">清空</button>
+        </div>
+      </div>
+      <div id="results" class="results-grid"></div>
+      <p class="hint">改动上方设置后会自动重新压缩；点击缩略图可对比原图。</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>🔒 所有处理均在你的浏览器本地完成，图片不会上传到任何服务器。</p>
+      <p>imgslim · MIT License · 用 <a href="https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API" target="_blank" rel="noopener">Canvas API</a> 构建，零依赖</p>
+    </div>
+  </footer>
+
+  <dialog id="preview-dialog" class="preview-dialog">
+    <div class="dialog-head">
+      <h2>压缩前后对比</h2>
+      <button id="preview-close" class="btn btn-ghost" type="button">关闭</button>
+    </div>
+    <div id="preview-body"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/zip.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
