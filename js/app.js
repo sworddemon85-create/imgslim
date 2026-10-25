@@ -13,6 +13,7 @@
   var MAX_DIM_DEFAULT = 4096;
   var RESPRUSH_DELAY = 400;
   var COLLAGE_MAX_IMAGES = 36;
+  var BACKEND_URL = "http://127.0.0.1:3210";
 
   var state = {
     items: [], // { id, file, status, blob, url, thumbUrl, width, height, error }
@@ -49,6 +50,9 @@
     collagePreview: document.getElementById("collage-preview"),
     collageInfo: document.getElementById("collage-info"),
     collageDownload: document.getElementById("collage-download"),
+    backendDot: document.getElementById("backend-dot"),
+    backendText: document.getElementById("backend-text"),
+    backendToggle: document.getElementById("backend-toggle"),
   };
 
   // ---------- 基础工具 ----------
@@ -120,23 +124,63 @@
 
   // ---------- 压缩 ----------
 
-  function compressItem(item, settings) {
-    return loadImage(item.file)
-      .then(function (img) {
-        var target = Utils.computeTargetSize(img.naturalWidth, img.naturalHeight, settings.maxDim);
-        var canvas = document.createElement("canvas");
-        canvas.width = target.width;
-        canvas.height = target.height;
-        var ctx = canvas.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, target.width, target.height);
+  // 浏览器本地压缩（Canvas 编码）
+  function canvasCompress(item, settings) {
+    return loadImage(item.file).then(function (img) {
+      var target = Utils.computeTargetSize(img.naturalWidth, img.naturalHeight, settings.maxDim);
+      var canvas = document.createElement("canvas");
+      canvas.width = target.width;
+      canvas.height = target.height;
+      var ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, target.width, target.height);
 
-        var mime = outputMime(item.file.type, settings.format);
-        return canvasToBlob(canvas, mime, settings.quality).then(function (blob) {
-          return { blob: blob, width: target.width, height: target.height };
-        });
-      })
+      var mime = outputMime(item.file.type, settings.format);
+      return canvasToBlob(canvas, mime, settings.quality).then(function (blob) {
+        return { blob: blob, width: target.width, height: target.height };
+      });
+    });
+  }
+
+  // 本地后端压缩（jimp 编码）；后端不支持 WebP 输出，需要时转 JPEG
+  function backendFormatFor(originalType, setting) {
+    if (setting === "webp") return "jpeg";
+    if (setting !== "auto") return setting;
+    return originalType === "image/png" ? "png" : "jpeg";
+  }
+
+  function backendCompress(item, settings) {
+    var fmt = backendFormatFor(item.file.type, settings.format);
+    var url =
+      BACKEND_URL + "/api/compress?quality=" + Math.round(settings.quality * 100) +
+      "&format=" + fmt + "&maxdim=" + settings.maxDim;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: item.file,
+    }).then(function (res) {
+      if (!res.ok) throw new Error("本地服务返回 " + res.status);
+      return res.blob().then(function (blob) {
+        return {
+          blob: blob,
+          width: parseInt(res.headers.get("X-Width"), 10) || 0,
+          height: parseInt(res.headers.get("X-Height"), 10) || 0,
+        };
+      });
+    });
+  }
+
+  function compressItem(item, settings) {
+    var useBackend = el.backendToggle.classList.contains("active");
+    var work = useBackend
+      ? backendCompress(item, settings).catch(function (err) {
+          toast("本地服务调用失败，本次已改用浏览器压缩");
+          return canvasCompress(item, settings);
+        })
+      : canvasCompress(item, settings);
+
+    return work
       .then(function (out) {
         if (item.url) URL.revokeObjectURL(item.url);
         item.blob = out.blob;
@@ -671,7 +715,46 @@
   el.collageFormat.addEventListener("change", renderCollage);
   el.collageDownload.addEventListener("click", downloadCollage);
 
+  // ---------- 本地服务连接 ----------
+
+  function probeBackend() {
+    el.backendText.textContent = "正在检测本地服务…";
+    fetch(BACKEND_URL + "/health", { signal: AbortSignal.timeout(2000) })
+      .then(function (res) {
+        return res.ok ? res.json() : Promise.reject(new Error("HTTP " + res.status));
+      })
+      .then(function (data) {
+        if (!data || !data.ok) throw new Error("bad response");
+        el.backendDot.className = "backend-dot connected";
+        el.backendText.textContent = "本地服务已连接 · 127.0.0.1:3210（" + data.service + " v" + data.version + "）";
+        el.backendToggle.disabled = false;
+        el.backendToggle.title = "压缩请求将发送到本机 3210 端口的 imgslim 后端处理";
+      })
+      .catch(function () {
+        el.backendDot.className = "backend-dot offline";
+        el.backendText.textContent = "本地服务未启动（点击重试）";
+        el.backendToggle.disabled = true;
+        el.backendToggle.classList.remove("active");
+        el.backendToggle.title = "先双击 D:\\Download\\imgslim-backend\\启动后端.bat，再点这里重试";
+      });
+  }
+
+  el.backendToggle.addEventListener("click", function () {
+    if (el.backendToggle.disabled) {
+      probeBackend();
+      return;
+    }
+    el.backendToggle.classList.toggle("active");
+    if (el.backendToggle.classList.contains("active")) {
+      toast("已开启本地服务压缩，之后的压缩将交给本机后端处理");
+    } else {
+      toast("已切回浏览器压缩");
+    }
+  });
+
+  el.backendText.addEventListener("click", probeBackend);
   el.qualityValue.textContent = Math.round(QUALITY_DEFAULT * 100) + "%";
+  probeBackend();
 
   // PWA：注册 Service Worker，安装后可离线使用
   if ("serviceWorker" in navigator) {

@@ -38,6 +38,14 @@
     </section>
 
     <section class="settings" aria-label="压缩设置">
+      <div class="backend-row">
+        <span id="backend-dot" class="backend-dot" aria-hidden="true"></span>
+        <span id="backend-text" class="backend-text">正在检测本地服务…</span>
+        <button id="backend-toggle" class="chip backend-toggle" type="button" disabled
+          title="先启动 D:\Download\imgslim-backend\启动后端.bat 才能使用">
+          ⚙ 用本地服务压缩
+        </button>
+      </div>
       <div class="presets" id="presets" role="group" aria-label="常用预设">
         <span class="presets-label">常用预设：</span>
         <button type="button" class="chip" data-quality="0.7" data-format="auto" data-maxdim="1080">微信/QQ 传图</button>

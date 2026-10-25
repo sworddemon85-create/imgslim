@@ -61,6 +61,14 @@ test("containFit 长条图按较小边适配", () => {
   assert.strictEqual(r.dy, 350);
 });
 
+test("computeCanvasSize 四张图必须拼出正方形整体", () => {
+  // 4 张 -> 田字格 2x2，且画布宽高相等
+  assert.deepStrictEqual(Collage.computeGrid(4), { cols: 2, rows: 2 });
+  const s = Collage.computeCanvasSize(4, 800, 8);
+  assert.strictEqual(s.width, s.height, "4 张拼图的画布必须是正方形");
+  assert.strictEqual(s.width, 2 * 800 + 8);
+});
+
 test("computeCanvasSize 网格尺寸与间距", () => {
   // 3 张一行：宽 = 3*800 + 2*8 = 2416，高 = 800
   const a = Collage.computeCanvasSize(3, 800, 8);

@@ -166,6 +166,46 @@ body {
   font-size: 0.85rem;
 }
 
+/* ---------- 本地服务状态 ---------- */
+
+.backend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-basis: 100%;
+}
+
+.backend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex: 0 0 auto;
+}
+
+.backend-dot.connected {
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+
+.backend-dot.offline {
+  background: var(--danger);
+}
+
+.backend-text {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.backend-text:hover {
+  color: var(--accent);
+}
+
+.backend-toggle {
+  margin-left: auto;
+}
+
 /* ---------- 预设 ---------- */
 
 .presets {
