@@ -1,4 +1,7 @@
 node_modules/
+backend/node_modules/
+backend/npm-cache/
+backend/node.exe
 .DS_Store
 Thumbs.db
 *.log

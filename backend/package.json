@@ -1,0 +1,14 @@
+{
+  "name": "imgslim-backend",
+  "version": "1.0.0",
+  "description": "Local image-processing backend for imgslim — compress and collage via HTTP API or CLI (jimp)",
+  "private": true,
+  "license": "MIT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "jimp": "^0.22.12"
+  }
+}

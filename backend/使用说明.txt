@@ -1,0 +1,64 @@
+imgslim 后端 — 本地图片处理服务
+================================
+
+这是一个不依赖浏览器、跑在你自己电脑上的图片处理后端。
+所有处理都在本机完成，没有任何数据离开你的电脑。
+
+文件夹内容
+----------
+  node.exe          独立的 Node.js 运行环境（自带，无需安装任何东西）
+  server.js         HTTP 服务：压缩接口 + 拼图接口
+  cli.js            命令行工具：批量压缩 / 拼图，不用开浏览器
+  collage.js        拼图网格计算（与网页版共用同一套逻辑）
+  node_modules\     jimp 图像库（纯 JS，支持 JPEG/PNG/BMP 解码编码）
+  启动后端.bat       双击即启动服务
+
+一、启动服务（HTTP 接口）
+--------------------------
+双击「启动后端.bat」，看到下面这句话就是成功了：
+
+  imgslim 后端已启动: http://127.0.0.1:3210（仅本机可访问）
+
+接口说明（可用 curl / 浏览器插件 / 自己的程序调用）：
+
+  GET  /health
+       健康检查，返回 {"ok":true,...}
+
+  POST /api/compress?quality=80&format=jpeg&maxdim=1080
+       请求体：直接放图片字节（不需要表单）
+       响应：压缩后的图片字节
+       参数：quality  JPEG质量10-100（默认80）
+             format   auto|jpeg|png（默认auto与原图一致）
+             maxdim   最大边长像素（默认4096，超出才缩放）
+       响应头：X-Original-Size / X-Compressed-Size / X-Width / X-Height
+
+  POST /api/collage
+       请求体：JSON，例如
+       {
+         "images": ["<base64图片1>", "<base64图片2>", "<base64图片3>"],
+         "cell": 800,          每格尺寸px（默认800）
+         "gap": 8,             间距px（默认8）
+         "fit": "cover",       cover=填满裁剪 / contain=完整留白
+         "bg": "#ffffff",      背景（transparent 透明需配 png）
+         "format": "png"       png|jpeg
+       }
+       响应：拼接后的图片字节
+
+二、命令行（不需要启动服务）
+--------------------------
+在本文件夹打开 cmd，运行：
+
+  批量压缩（整个文件夹，输出到 compressed 子目录）：
+    node.exe cli.js compress "D:\照片" --quality 80 --format jpeg
+
+  压缩单个文件：
+    node.exe cli.js compress "D:\照片\图1.jpg"
+
+  拼图（把文件夹里的图拼成一张）：
+    node.exe cli.js collage "D:\照片" --cell 800 --gap 8 --out "D:\拼图.png"
+
+三、常见问题
+----------
+  * 端口被占用？换端口：set PORT=3211 后再运行 node.exe server.js
+  * 支持格式：JPEG / PNG / BMP 输入；GIF 取第一帧
+  * 服务只监听 127.0.0.1，局域网其他设备无法访问，安全

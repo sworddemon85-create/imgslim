@@ -20,7 +20,7 @@
 - **Installable PWA** — install it and use it fully offline
 - **Before/after comparison** — click a thumbnail to compare quality
 - **Dark mode** — follows your system preference
-- **Optional local backend** — if the companion local service is running, compression can be delegated to it (auto-detected, with browser fallback)
+- **Optional local backend** — if the companion local service is running, compression can be delegated to it (auto-detected, with browser fallback). The backend lives in [`backend/`](backend/) and also works standalone over HTTP or a CLI
 
 ## 🖥️ Try it
 
@@ -62,6 +62,7 @@ imgslim/
 ├── manifest.webmanifest  # PWA manifest
 ├── icons/                # app icons (192/512)
 ├── server.js             # zero-dependency dev server
+├── backend/              # optional local processing backend (HTTP API + CLI, jimp)
 ├── test/                 # node:test unit tests
 └── .github/workflows/    # CI + GitHub Pages deployment
 ```
