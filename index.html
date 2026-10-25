@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>imgslim — 纯前端图片压缩工具</title>
-  <meta name="description" content="imgslim 是一个纯前端的图片压缩工具：拖入图片即可压缩、转换格式、批量打包下载，所有处理都在浏览器本地完成，图片不会上传到任何服务器。" />
+  <meta name="description" content="imgslim is an in-browser image compressor: drag images in to compress, convert formats, batch-download as ZIP. Nothing is ever uploaded." />
   <meta property="og:title" content="imgslim — 纯前端图片压缩工具" />
-  <meta property="og:description" content="拖入即压缩，图片永不上传。零依赖、开源、开箱即用。" />
+  <meta property="og:description" content="拖入即压缩，图片永不上传。零依赖、开源、开箱即用。In-browser image compressor — nothing ever uploaded." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%9C%EF%B8%8F%3C/text%3E%3C/svg%3E" />
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
@@ -19,8 +19,9 @@
   <header class="site-header">
     <div class="container header-inner">
       <h1 class="logo">🗜️ imgslim</h1>
-      <p class="tagline">拖入即压缩 · 图片永不上传 · 纯浏览器本地处理</p>
+      <p class="tagline" data-i18n="tagline">拖入即压缩 · 图片永不上传 · 纯浏览器本地处理</p>
       <a class="github-link" href="https://github.com/sworddemon85-create/imgslim" target="_blank" rel="noopener">GitHub ↗</a>
+      <button id="lang-toggle" class="lang-toggle" type="button" aria-label="切换语言 / switch language">EN</button>
     </div>
   </header>
 
@@ -31,9 +32,9 @@
         <circle cx="8.5" cy="8.5" r="1.5"></circle>
         <path d="M21 15l-5-5L5 21"></path>
       </svg>
-      <p class="dropzone-title">把图片拖到这里，或粘贴（Ctrl+V）</p>
-      <p class="dropzone-sub">支持 JPG / PNG / WebP，可多选、可拖入整个文件夹</p>
-      <button id="browse-btn" class="btn btn-primary" type="button">选择图片</button>
+      <p class="dropzone-title" data-i18n="dropzoneTitle">把图片拖到这里，或粘贴（Ctrl+V）</p>
+      <p class="dropzone-sub" data-i18n="dropzoneSub">支持 JPG / PNG / WebP，可多选、可拖入整个文件夹</p>
+      <button id="browse-btn" class="btn btn-primary" type="button" data-i18n="browseBtn">选择图片</button>
       <input id="file-input" type="file" accept="image/*" multiple hidden />
     </section>
 
@@ -42,32 +43,30 @@
         <span id="backend-dot" class="backend-dot" aria-hidden="true"></span>
         <span id="backend-text" class="backend-text">正在检测本地服务…</span>
         <button id="backend-toggle" class="chip backend-toggle" type="button" disabled
-          title="先启动 D:\Download\imgslim-backend\启动后端.bat 才能使用">
-          ⚙ 用本地服务压缩
-        </button>
+          data-i18n="backendToggle" data-i18n-title="backendTitleOff">⚙ 用本地服务压缩</button>
       </div>
       <div class="presets" id="presets" role="group" aria-label="常用预设">
-        <span class="presets-label">常用预设：</span>
-        <button type="button" class="chip" data-quality="0.7" data-format="auto" data-maxdim="1080">微信/QQ 传图</button>
-        <button type="button" class="chip" data-quality="0.75" data-format="auto" data-maxdim="1080">朋友圈</button>
-        <button type="button" class="chip" data-quality="0.75" data-format="webp" data-maxdim="1280">网页用图</button>
-        <button type="button" class="chip" data-quality="0.8" data-format="auto" data-maxdim="4096">仅转格式</button>
+        <span class="presets-label" data-i18n="presetsLabel">常用预设：</span>
+        <button type="button" class="chip" data-quality="0.7" data-format="auto" data-maxdim="1080" data-i18n="presetChat">微信/QQ 传图</button>
+        <button type="button" class="chip" data-quality="0.75" data-format="auto" data-maxdim="1080" data-i18n="presetFeed">朋友圈</button>
+        <button type="button" class="chip" data-quality="0.75" data-format="webp" data-maxdim="1280" data-i18n="presetWeb">网页用图</button>
+        <button type="button" class="chip" data-quality="0.8" data-format="auto" data-maxdim="4096" data-i18n="presetConvert">仅转格式</button>
       </div>
       <label class="setting">
-        <span class="setting-label">压缩质量 <b id="quality-value">80%</b></span>
+        <span class="setting-label"><span data-i18n="qualityLabel">压缩质量</span> <b id="quality-value">80%</b></span>
         <input id="quality" type="range" min="0.1" max="1" step="0.05" value="0.8" />
       </label>
       <label class="setting">
-        <span class="setting-label">输出格式</span>
+        <span class="setting-label" data-i18n="formatLabel">输出格式</span>
         <select id="format">
-          <option value="auto" selected>自动（与原图一致）</option>
+          <option value="auto" selected data-i18n="formatAuto">自动（与原图一致）</option>
           <option value="jpeg">JPEG</option>
           <option value="png">PNG</option>
           <option value="webp">WebP</option>
         </select>
       </label>
       <label class="setting">
-        <span class="setting-label">最大边长（px）</span>
+        <span class="setting-label" data-i18n="maxDimLabel">最大边长（px）</span>
         <input id="max-dim" type="number" min="16" step="16" value="4096" placeholder="不缩放填 0 以上的大值" />
       </label>
     </section>
@@ -76,68 +75,66 @@
       <div class="results-head">
         <p id="summary" class="summary"></p>
         <div class="results-actions">
-          <button id="download-all" class="btn btn-primary" type="button" disabled>打包下载 ZIP</button>
-          <button id="collage-btn" class="btn" type="button" disabled>🧩 拼接为一张图</button>
-          <button id="clear-all" class="btn btn-ghost" type="button">清空</button>
+          <button id="download-all" class="btn btn-primary" type="button" disabled data-i18n="downloadAll">打包下载 ZIP</button>
+          <button id="collage-btn" class="btn" type="button" disabled data-i18n="collageBtn">🧩 拼接为一张图</button>
+          <button id="clear-all" class="btn btn-ghost" type="button" data-i18n="clearAll">清空</button>
         </div>
       </div>
       <div id="results" class="results-grid"></div>
-      <p class="hint">改动上方设置后会自动重新压缩；点击缩略图可对比原图。</p>
+      <p class="hint" data-i18n="hint">改动上方设置后会自动重新压缩；点击缩略图可对比原图。</p>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="container">
-      <p>🔒 所有处理均在你的浏览器本地完成，图片不会上传到任何服务器。</p>
-      <p>imgslim · MIT License · 用 <a href="https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API" target="_blank" rel="noopener">Canvas API</a> 构建，零依赖</p>
+      <p data-i18n="footerPrivacy">🔒 所有处理均在你的浏览器本地完成，图片不会上传到任何服务器。</p>
+      <p>imgslim · MIT License · <span data-i18n="footerBuilt1">用</span> <a href="https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API" target="_blank" rel="noopener">Canvas API</a> <span data-i18n="footerBuilt2">构建，零依赖</span></p>
     </div>
   </footer>
 
   <dialog id="preview-dialog" class="preview-dialog">
     <div class="dialog-head">
-      <h2>压缩前后对比</h2>
-      <button id="preview-close" class="btn btn-ghost" type="button">关闭</button>
+      <h2 data-i18n="previewTitle">压缩前后对比</h2>
+      <button id="preview-close" class="btn btn-ghost" type="button" data-i18n="close">关闭</button>
     </div>
     <div id="preview-body"></div>
   </dialog>
 
-  <div id="toast" class="toast" role="status"></div>
-
   <dialog id="collage-dialog" class="preview-dialog collage-dialog">
     <div class="dialog-head">
-      <h2>🧩 图片拼接</h2>
-      <button id="collage-close" class="btn btn-ghost" type="button">关闭</button>
+      <h2 data-i18n="collageTitle">🧩 图片拼接</h2>
+      <button id="collage-close" class="btn btn-ghost" type="button" data-i18n="close">关闭</button>
     </div>
     <div class="collage-settings">
       <label class="setting">
-        <span class="setting-label">每格尺寸 <b id="collage-cell-label">800px</b></span>
+        <span class="setting-label"><span data-i18n="collageCell">每格尺寸</span> <b id="collage-cell-label">800px</b></span>
         <input id="collage-cell" type="range" min="200" max="1600" step="100" value="800" />
       </label>
       <label class="setting">
-        <span class="setting-label">间距 <b id="collage-gap-label">8px</b></span>
+        <span class="setting-label"><span data-i18n="collageGap">间距</span> <b id="collage-gap-label">8px</b></span>
         <input id="collage-gap" type="range" min="0" max="40" step="2" value="8" />
       </label>
       <label class="setting">
-        <span class="setting-label">填充方式</span>
+        <span class="setting-label" data-i18n="collageFit">填充方式</span>
         <select id="collage-fit">
-          <option value="cover" selected>填满格子（居中裁剪多余部分）</option>
-          <option value="contain">完整显示（比例不同会留白）</option>
+          <option value="cover" selected data-i18n="fitCover">填满格子（居中裁剪多余部分）</option>
+          <option value="contain" data-i18n="fitContain">完整显示（比例不同会留白）</option>
         </select>
       </label>
       <label class="setting">
-        <span class="setting-label">背景</span>
+        <span class="setting-label" data-i18n="collageBg">背景</span>
         <select id="collage-bg">
-          <option value="#ffffff" selected>白色</option>
-          <option value="#1c2333">深色</option>
-          <option value="transparent">透明（选 PNG 输出）</option>
+          <option value="#ffffff" selected data-i18n="bgWhite">白色</option>
+          <option value="#1c2333" data-i18n="bgDark">深色</option>
+          <option value="transparent" data-i18n="bgTransparent">透明（选 PNG 输出）</option>
         </select>
       </label>
       <label class="setting">
-        <span class="setting-label">输出格式</span>
+        <span class="setting-label" data-i18n="collageFormat">输出格式</span>
         <select id="collage-format">
-          <option value="image/webp" selected>WebP（体积最小）</option>
-          <option value="image/jpeg">JPEG（兼容性最好）</option>
-          <option value="image/png">PNG（无损/透明）</option>
+          <option value="image/webp" selected data-i18n="outWebp">WebP（体积最小）</option>
+          <option value="image/jpeg" data-i18n="outJpeg">JPEG（兼容性最好）</option>
+          <option value="image/png" data-i18n="outPng">PNG（无损/透明）</option>
         </select>
       </label>
     </div>
@@ -146,13 +143,16 @@
     </div>
     <div class="collage-foot">
       <p id="collage-info" class="hint"></p>
-      <button id="collage-download" class="btn btn-primary" type="button">下载拼图</button>
+      <button id="collage-download" class="btn btn-primary" type="button" data-i18n="collageDownload">下载拼图</button>
     </div>
   </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
 
   <script src="js/utils.js"></script>
   <script src="js/zip.js"></script>
   <script src="js/collage.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

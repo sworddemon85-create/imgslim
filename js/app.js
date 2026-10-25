@@ -8,6 +8,7 @@
   var Utils = window.ImgSlimUtils;
   var Zip = window.ImgSlimZip;
   var Collage = window.ImgSlimCollage;
+  var I18n = window.ImgSlimI18n;
 
   var QUALITY_DEFAULT = 0.8;
   var MAX_DIM_DEFAULT = 4096;
@@ -53,6 +54,7 @@
     backendDot: document.getElementById("backend-dot"),
     backendText: document.getElementById("backend-text"),
     backendToggle: document.getElementById("backend-toggle"),
+    langToggle: document.getElementById("lang-toggle"),
   };
 
   // ---------- 基础工具 ----------
@@ -103,7 +105,7 @@
       };
       img.onerror = function () {
         URL.revokeObjectURL(url);
-        reject(new Error("浏览器无法解码该图片格式"));
+        reject(new Error(I18n.t("decodeError")));
       };
       img.src = url;
     });
@@ -114,7 +116,7 @@
       canvas.toBlob(
         function (blob) {
           if (blob) resolve(blob);
-          else reject(new Error("编码失败，可能是浏览器不支持该输出格式"));
+          else reject(new Error(I18n.t("encodeError")));
         },
         mime,
         quality
@@ -175,7 +177,7 @@
     var useBackend = el.backendToggle.classList.contains("active");
     var work = useBackend
       ? backendCompress(item, settings).catch(function (err) {
-          toast("本地服务调用失败，本次已改用浏览器压缩");
+          toast(I18n.t("backendFail"));
           return canvasCompress(item, settings);
         })
       : canvasCompress(item, settings);
@@ -240,6 +242,7 @@
         el.results.appendChild(card);
         return;
       }
+      // 注意：卡片文案在渲染时取当前语言；语言切换后整卡片会由 render() 重建
 
       var thumb = document.createElement("div");
       thumb.className = "card-thumb";
@@ -268,15 +271,18 @@
         var saved = Utils.savedPercent(item.file.size, item.blob.size);
         var sizes = document.createElement("p");
         sizes.className = "sizes";
-        sizes.textContent =
-          Utils.formatBytes(item.file.size) + " → " + Utils.formatBytes(item.blob.size) +
-          "（" + item.width + "×" + item.height + "）";
+        sizes.textContent = I18n.t("sizes", {
+          a: Utils.formatBytes(item.file.size),
+          b: Utils.formatBytes(item.blob.size),
+          w: item.width,
+          h: item.height,
+        });
         var badge = document.createElement("span");
         badge.className = "badge" + (saved > 0 ? " saved" : "");
-        badge.textContent = saved > 0 ? "−" + saved + "%" : "已是最优";
+        badge.textContent = saved > 0 ? "−" + saved + "%" : I18n.t("badgeBest");
         var download = document.createElement("button");
         download.className = "btn btn-small";
-        download.textContent = "下载";
+        download.textContent = I18n.t("download");
         download.addEventListener("click", function () {
           downloadItem(item);
         });
@@ -290,7 +296,7 @@
       } else {
         var working = document.createElement("p");
         working.className = "sizes";
-        working.textContent = "压缩中…";
+        working.textContent = I18n.t("working");
         info.appendChild(working);
       }
 
@@ -303,9 +309,12 @@
     document.querySelector(".results-panel").hidden = !hasFiles;
     if (doneCount > 0) {
       var totalSaved = Utils.savedPercent(totalOriginal, totalCompressed);
-      el.summary.textContent =
-        "共 " + doneCount + " 张，" + Utils.formatBytes(totalOriginal) + " → " +
-        Utils.formatBytes(totalCompressed) + "，节省 " + totalSaved + "%";
+      el.summary.textContent = I18n.t("summary", {
+        n: doneCount,
+        a: Utils.formatBytes(totalOriginal),
+        b: Utils.formatBytes(totalCompressed),
+        p: totalSaved,
+      });
       el.downloadAll.disabled = false;
       el.collageBtn.disabled = false;
     } else {
@@ -376,15 +385,16 @@
 
       var beforeBox = document.createElement("figure");
       var beforeCaption = document.createElement("figcaption");
-      beforeCaption.textContent = "原图 · " + Utils.formatBytes(item.file.size);
+      beforeCaption.textContent = I18n.t("previewBefore", { size: Utils.formatBytes(item.file.size) });
       beforeBox.appendChild(before);
       beforeBox.appendChild(beforeCaption);
 
       var afterBox = document.createElement("figure");
       var afterCaption = document.createElement("figcaption");
-      afterCaption.textContent =
-        "压缩后 · " + Utils.formatBytes(item.blob.size) + "（−" +
-        Utils.savedPercent(item.file.size, item.blob.size) + "%）";
+      afterCaption.textContent = I18n.t("previewAfter", {
+        size: Utils.formatBytes(item.blob.size),
+        p: Utils.savedPercent(item.file.size, item.blob.size),
+      });
       afterBox.appendChild(after);
       afterBox.appendChild(afterCaption);
 
@@ -466,8 +476,11 @@
           ctx.drawImage(img, dx + r.dx, dy + r.dy, r.dw, r.dh);
         }
       });
-      el.collageInfo.textContent =
-        "已拼接 " + done.length + " 张 → " + size.width + "×" + size.height + " px";
+      el.collageInfo.textContent = I18n.t("collageInfo", {
+        n: done.length,
+        w: size.width,
+        h: size.height,
+      });
     });
   }
 
@@ -479,11 +492,11 @@
     canvas.toBlob(
       function (blob) {
         if (!blob) {
-          toast("拼图导出失败");
+          toast(I18n.t("collageExportFail"));
           return;
         }
         var url = URL.createObjectURL(blob);
-        triggerDownload(url, "拼图-" + canvas.width + "x" + canvas.height + "-imgslim." + ext);
+        triggerDownload(url, I18n.t("collageFilePrefix") + "-" + canvas.width + "x" + canvas.height + "-imgslim." + ext);
         setTimeout(function () {
           URL.revokeObjectURL(url);
         }, 10000);
@@ -508,7 +521,7 @@
     function drain() {
       if (!queue.length || files.length >= MAX_FOLDER_FILES) {
         if (files.length >= MAX_FOLDER_FILES) {
-          toast("一次最多处理 " + MAX_FOLDER_FILES + " 张图片，已截断");
+          toast(I18n.t("maxFiles", { n: MAX_FOLDER_FILES }));
         }
         return Promise.resolve(files);
       }
@@ -552,7 +565,7 @@
   function addFiles(fileList) {
     var files = Array.prototype.slice.call(fileList).filter(function (file) {
       if (file.type.indexOf("image/") === 0) return true;
-      toast("已跳过非图片文件：" + file.name);
+      toast(I18n.t("skipNonImage", { name: file.name }));
       return false;
     });
     if (!files.length) return;
@@ -718,7 +731,7 @@
   // ---------- 本地服务连接 ----------
 
   function probeBackend() {
-    el.backendText.textContent = "正在检测本地服务…";
+    el.backendText.textContent = I18n.t("backendChecking");
     fetch(BACKEND_URL + "/health", { signal: AbortSignal.timeout(2000) })
       .then(function (res) {
         return res.ok ? res.json() : Promise.reject(new Error("HTTP " + res.status));
@@ -726,16 +739,16 @@
       .then(function (data) {
         if (!data || !data.ok) throw new Error("bad response");
         el.backendDot.className = "backend-dot connected";
-        el.backendText.textContent = "本地服务已连接 · 127.0.0.1:3210（" + data.service + " v" + data.version + "）";
+        el.backendText.textContent = I18n.t("backendConnected", { service: data.service, version: data.version });
         el.backendToggle.disabled = false;
-        el.backendToggle.title = "压缩请求将发送到本机 3210 端口的 imgslim 后端处理";
+        el.backendToggle.title = I18n.t("backendTitleOn");
       })
       .catch(function () {
         el.backendDot.className = "backend-dot offline";
-        el.backendText.textContent = "本地服务未启动（点击重试）";
+        el.backendText.textContent = I18n.t("backendOffline");
         el.backendToggle.disabled = true;
         el.backendToggle.classList.remove("active");
-        el.backendToggle.title = "先双击 D:\\Download\\imgslim-backend\\启动后端.bat，再点这里重试";
+        el.backendToggle.title = I18n.t("backendTitleOff");
       });
   }
 
@@ -746,13 +759,32 @@
     }
     el.backendToggle.classList.toggle("active");
     if (el.backendToggle.classList.contains("active")) {
-      toast("已开启本地服务压缩，之后的压缩将交给本机后端处理");
+      toast(I18n.t("backendOn"));
     } else {
-      toast("已切回浏览器压缩");
+      toast(I18n.t("backendOff"));
     }
   });
 
   el.backendText.addEventListener("click", probeBackend);
+  // ---------- 语言切换 ----------
+
+  function refreshLangToggleLabel() {
+    el.langToggle.textContent = I18n.toggleLabel();
+  }
+
+  el.langToggle.addEventListener("click", function () {
+    I18n.toggle();
+    refreshLangToggleLabel();
+  });
+
+  document.addEventListener("langchange", function () {
+    render();
+    if (el.collageDialog.open) renderCollage();
+    probeBackend();
+  });
+
+  I18n.applyStatic();
+  refreshLangToggleLabel();
   el.qualityValue.textContent = Math.round(QUALITY_DEFAULT * 100) + "%";
   probeBackend();
 

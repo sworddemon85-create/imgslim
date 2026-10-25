@@ -85,6 +85,25 @@ body {
   text-decoration: underline;
 }
 
+.lang-toggle {
+  display: inline-block;
+  margin-top: 14px;
+  margin-left: 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.lang-toggle:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 /* ---------- 拖放区 ---------- */
 
 .dropzone {
