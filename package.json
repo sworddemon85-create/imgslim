@@ -1,6 +1,6 @@
 {
   "name": "imgslim",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "纯前端图片压缩工具 — Privacy-friendly in-browser image compressor. No uploads, no dependencies.",
   "private": true,
   "license": "MIT",

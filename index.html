@@ -9,6 +9,10 @@
   <meta property="og:description" content="拖入即压缩，图片永不上传。零依赖、开源、开箱即用。" />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%9C%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#4f5dff" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -28,12 +32,19 @@
         <path d="M21 15l-5-5L5 21"></path>
       </svg>
       <p class="dropzone-title">把图片拖到这里，或粘贴（Ctrl+V）</p>
-      <p class="dropzone-sub">支持 JPG / PNG / WebP，可多选、可批量</p>
+      <p class="dropzone-sub">支持 JPG / PNG / WebP，可多选、可拖入整个文件夹</p>
       <button id="browse-btn" class="btn btn-primary" type="button">选择图片</button>
       <input id="file-input" type="file" accept="image/*" multiple hidden />
     </section>
 
     <section class="settings" aria-label="压缩设置">
+      <div class="presets" id="presets" role="group" aria-label="常用预设">
+        <span class="presets-label">常用预设：</span>
+        <button type="button" class="chip" data-quality="0.7" data-format="auto" data-maxdim="1080">微信/QQ 传图</button>
+        <button type="button" class="chip" data-quality="0.75" data-format="auto" data-maxdim="1080">朋友圈</button>
+        <button type="button" class="chip" data-quality="0.75" data-format="webp" data-maxdim="1280">网页用图</button>
+        <button type="button" class="chip" data-quality="0.8" data-format="auto" data-maxdim="4096">仅转格式</button>
+      </div>
       <label class="setting">
         <span class="setting-label">压缩质量 <b id="quality-value">80%</b></span>
         <input id="quality" type="range" min="0.1" max="1" step="0.05" value="0.8" />

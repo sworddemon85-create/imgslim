@@ -21,6 +21,7 @@
     dropzone: document.getElementById("dropzone"),
     fileInput: document.getElementById("file-input"),
     browseBtn: document.getElementById("browse-btn"),
+    presets: document.getElementById("presets"),
     quality: document.getElementById("quality"),
     qualityValue: document.getElementById("quality-value"),
     format: document.getElementById("format"),
@@ -335,6 +336,60 @@
 
   // ---------- 添加文件 ----------
 
+  var MAX_FOLDER_FILES = 300;
+
+  // 把拖入的目录递归展开成文件列表（只支持浏览器的 webkitGetAsEntry API）
+  function expandEntries(list) {
+    var files = [];
+    var queue = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i]) queue.push(list[i]);
+    }
+
+    function drain() {
+      if (!queue.length || files.length >= MAX_FOLDER_FILES) {
+        if (files.length >= MAX_FOLDER_FILES) {
+          toast("一次最多处理 " + MAX_FOLDER_FILES + " 张图片，已截断");
+        }
+        return Promise.resolve(files);
+      }
+      var entry = queue.shift();
+      if (entry.isFile) {
+        return new Promise(function (resolve) {
+          entry.file(resolve, function () {
+            resolve(null);
+          });
+        }).then(function (file) {
+          if (file) files.push(file);
+          return drain();
+        });
+      }
+      if (entry.isDirectory) {
+        var reader = entry.createReader();
+        // readEntries 每次最多返回 100 条，需要循环读到空
+        var readBatch = function () {
+          return new Promise(function (resolve) {
+            reader.readEntries(resolve, function () {
+              resolve([]);
+            });
+          });
+        };
+        var readAll = function () {
+          return readBatch().then(function (batch) {
+            for (var j = 0; j < batch.length; j++) {
+              queue.push(batch[j]);
+            }
+            return batch.length ? readAll() : drain();
+          });
+        };
+        return readAll();
+      }
+      return drain();
+    }
+
+    return drain();
+  }
+
   function addFiles(fileList) {
     var files = Array.prototype.slice.call(fileList).filter(function (file) {
       if (file.type.indexOf("image/") === 0) return true;
@@ -395,9 +450,39 @@
     });
   });
   el.dropzone.addEventListener("drop", function (event) {
-    if (event.dataTransfer && event.dataTransfer.files.length) {
-      addFiles(event.dataTransfer.files);
+    if (!event.dataTransfer) return;
+    var items = Array.prototype.slice.call(event.dataTransfer.items || []);
+    if (!items.length) {
+      if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files);
+      return;
     }
+    // items/getAsFile/webkitGetAsEntry 必须在事件回调内同步读取
+    var entries = [];
+    var directFiles = [];
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (item.kind !== "file") continue;
+      var entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+      if (entry) entries.push(entry);
+      var file = item.getAsFile();
+      if (file) directFiles.push(file);
+    }
+    if (!entries.length) {
+      addFiles(directFiles);
+      return;
+    }
+    expandEntries(entries).then(function (expanded) {
+      // 合并两条路径的结果并按 名称+大小 去重；Entry 展开失败时兜底用直接文件
+      var seen = {};
+      expanded.forEach(function (f) {
+        seen[f.name + "/" + f.size] = true;
+      });
+      var merged = expanded.slice();
+      directFiles.forEach(function (f) {
+        if (!seen[f.name + "/" + f.size]) merged.push(f);
+      });
+      addFiles(merged.length ? merged : directFiles);
+    });
   });
 
   document.addEventListener("paste", function (event) {
@@ -408,12 +493,40 @@
     if (images.length) addFiles(images);
   });
 
-  el.quality.addEventListener("input", function () {
-    el.qualityValue.textContent = Math.round(el.quality.value * 100) + "%";
+  // ---------- 常用预设 ----------
+
+  function clearActivePreset() {
+    Array.prototype.forEach.call(el.presets.querySelectorAll(".chip"), function (chip) {
+      chip.classList.remove("active");
+    });
+  }
+
+  el.presets.addEventListener("click", function (event) {
+    var chip = event.target.closest(".chip");
+    if (!chip) return;
+    el.quality.value = chip.dataset.quality;
+    el.qualityValue.textContent = Math.round(chip.dataset.quality * 100) + "%";
+    el.format.value = chip.dataset.format;
+    el.maxDim.value = chip.dataset.maxdim;
+    Array.prototype.forEach.call(el.presets.querySelectorAll(".chip"), function (c) {
+      c.classList.toggle("active", c === chip);
+    });
     reschedule();
   });
-  el.format.addEventListener("change", reschedule);
-  el.maxDim.addEventListener("change", reschedule);
+
+  el.quality.addEventListener("input", function () {
+    el.qualityValue.textContent = Math.round(el.quality.value * 100) + "%";
+    clearActivePreset();
+    reschedule();
+  });
+  el.format.addEventListener("change", function () {
+    clearActivePreset();
+    reschedule();
+  });
+  el.maxDim.addEventListener("change", function () {
+    clearActivePreset();
+    reschedule();
+  });
 
   el.downloadAll.addEventListener("click", downloadAllAsZip);
   el.clearAll.addEventListener("click", clearAll);
@@ -422,4 +535,17 @@
   });
 
   el.qualityValue.textContent = Math.round(QUALITY_DEFAULT * 100) + "%";
+
+  // PWA：注册 Service Worker，安装后可离线使用
+  if ("serviceWorker" in navigator) {
+    var isSecure =
+      location.protocol === "https:" ||
+      location.hostname === "localhost" ||
+      location.hostname === "127.0.0.1";
+    if (isSecure) {
+      navigator.serviceWorker.register("./sw.js").catch(function () {
+        // 离线缓存注册失败不影响正常使用
+      });
+    }
+  }
 })();
