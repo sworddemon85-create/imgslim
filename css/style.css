@@ -424,6 +424,53 @@ body {
   text-align: center;
 }
 
+/* ---------- 图片拼接 ---------- */
+
+.collage-dialog {
+  width: min(920px, 94vw);
+}
+
+.collage-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+
+.collage-settings .setting {
+  flex: 1 1 180px;
+}
+
+.collage-preview-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.collage-preview-wrap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.collage-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.collage-foot .hint {
+  margin: 0;
+}
+
 /* ---------- 提示条 ---------- */
 
 .toast {

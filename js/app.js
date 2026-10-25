@@ -7,10 +7,12 @@
 
   var Utils = window.ImgSlimUtils;
   var Zip = window.ImgSlimZip;
+  var Collage = window.ImgSlimCollage;
 
   var QUALITY_DEFAULT = 0.8;
   var MAX_DIM_DEFAULT = 4096;
   var RESPRUSH_DELAY = 400;
+  var COLLAGE_MAX_IMAGES = 36;
 
   var state = {
     items: [], // { id, file, status, blob, url, thumbUrl, width, height, error }
@@ -34,6 +36,19 @@
     dialog: document.getElementById("preview-dialog"),
     dialogBody: document.getElementById("preview-body"),
     dialogClose: document.getElementById("preview-close"),
+    collageBtn: document.getElementById("collage-btn"),
+    collageDialog: document.getElementById("collage-dialog"),
+    collageClose: document.getElementById("collage-close"),
+    collageCell: document.getElementById("collage-cell"),
+    collageCellLabel: document.getElementById("collage-cell-label"),
+    collageGap: document.getElementById("collage-gap"),
+    collageGapLabel: document.getElementById("collage-gap-label"),
+    collageFit: document.getElementById("collage-fit"),
+    collageBg: document.getElementById("collage-bg"),
+    collageFormat: document.getElementById("collage-format"),
+    collagePreview: document.getElementById("collage-preview"),
+    collageInfo: document.getElementById("collage-info"),
+    collageDownload: document.getElementById("collage-download"),
   };
 
   // ---------- 基础工具 ----------
@@ -248,9 +263,11 @@
         "共 " + doneCount + " 张，" + Utils.formatBytes(totalOriginal) + " → " +
         Utils.formatBytes(totalCompressed) + "，节省 " + totalSaved + "%";
       el.downloadAll.disabled = false;
+      el.collageBtn.disabled = false;
     } else {
       el.summary.textContent = "";
       el.downloadAll.disabled = true;
+      el.collageBtn.disabled = true;
     }
   }
 
@@ -332,6 +349,104 @@
       el.dialogBody.appendChild(wrap);
       el.dialog.showModal();
     });
+  }
+
+  // ---------- 图片拼接 ----------
+
+  var renderCollageTimer = null;
+
+  function loadBlobImage(blob) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function () {
+        resolve(img);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error("解码失败"));
+      };
+      img.src = url;
+    });
+  }
+
+  function scheduleCollageRender() {
+    clearTimeout(renderCollageTimer);
+    renderCollageTimer = setTimeout(renderCollage, 120);
+  }
+
+  function renderCollage() {
+    var done = state.items
+      .filter(function (item) {
+        return item.status === "done";
+      })
+      .slice(0, COLLAGE_MAX_IMAGES);
+    if (!done.length) return;
+
+    var cell = Utils.clamp(parseInt(el.collageCell.value, 10) || 800, 200, 1600);
+    var gap = Utils.clamp(parseInt(el.collageGap.value, 10) || 0, 0, 40);
+    var fit = el.collageFit.value;
+    var bg = el.collageBg.value;
+    var mime = el.collageFormat.value;
+    // JPEG 不支持透明，透明背景时强制 PNG
+    if (bg === "transparent" && mime === "image/jpeg") {
+      mime = "image/png";
+      el.collageFormat.value = mime;
+    }
+
+    var size = Collage.computeCanvasSize(done.length, cell, gap);
+    var canvas = el.collagePreview;
+    canvas.width = size.width;
+    canvas.height = size.height;
+    var ctx = canvas.getContext("2d");
+    if (bg !== "transparent") {
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, size.width, size.height);
+    }
+
+    Promise.all(
+      done.map(function (item) {
+        return loadBlobImage(item.blob);
+      })
+    ).then(function (images) {
+      images.forEach(function (img, i) {
+        var col = i % size.cols;
+        var row = Math.floor(i / size.cols);
+        var dx = col * (cell + gap);
+        var dy = row * (cell + gap);
+        if (fit === "cover") {
+          var src = Collage.coverDraw(img.naturalWidth, img.naturalHeight, cell, cell);
+          ctx.drawImage(img, src.sx, src.sy, src.sw, src.sh, dx, dy, cell, cell);
+        } else {
+          var r = Collage.containFit(img.naturalWidth, img.naturalHeight, cell, cell);
+          ctx.drawImage(img, dx + r.dx, dy + r.dy, r.dw, r.dh);
+        }
+      });
+      el.collageInfo.textContent =
+        "已拼接 " + done.length + " 张 → " + size.width + "×" + size.height + " px";
+    });
+  }
+
+  function downloadCollage() {
+    var canvas = el.collagePreview;
+    if (!canvas.width) return;
+    var mime = el.collageFormat.value;
+    var ext = extensionFor(mime);
+    canvas.toBlob(
+      function (blob) {
+        if (!blob) {
+          toast("拼图导出失败");
+          return;
+        }
+        var url = URL.createObjectURL(blob);
+        triggerDownload(url, "拼图-" + canvas.width + "x" + canvas.height + "-imgslim." + ext);
+        setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 10000);
+      },
+      mime,
+      0.9
+    );
   }
 
   // ---------- 添加文件 ----------
@@ -533,6 +648,28 @@
   el.dialogClose.addEventListener("click", function () {
     el.dialog.close();
   });
+
+  // ---------- 拼接对话框事件 ----------
+
+  el.collageBtn.addEventListener("click", function () {
+    el.collageDialog.showModal();
+    renderCollage();
+  });
+  el.collageClose.addEventListener("click", function () {
+    el.collageDialog.close();
+  });
+  el.collageCell.addEventListener("input", function () {
+    el.collageCellLabel.textContent = el.collageCell.value + "px";
+    scheduleCollageRender();
+  });
+  el.collageGap.addEventListener("input", function () {
+    el.collageGapLabel.textContent = el.collageGap.value + "px";
+    scheduleCollageRender();
+  });
+  el.collageFit.addEventListener("change", renderCollage);
+  el.collageBg.addEventListener("change", renderCollage);
+  el.collageFormat.addEventListener("change", renderCollage);
+  el.collageDownload.addEventListener("click", downloadCollage);
 
   el.qualityValue.textContent = Math.round(QUALITY_DEFAULT * 100) + "%";
 
