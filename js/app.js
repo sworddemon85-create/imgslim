@@ -97,11 +97,13 @@
     return dot > 0 ? name.slice(0, dot) : name;
   }
 
-  function loadImage(file) {
+  function loadImage(file, temporary) {
     return new Promise(function (resolve, reject) {
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function () {
+        // Canvas 使用已解码的像素，不再需要临时 URL；可交互预览仍保留它。
+        if (temporary) URL.revokeObjectURL(url);
         resolve(img);
       };
       img.onerror = function () {
@@ -129,7 +131,7 @@
 
   // 浏览器本地压缩（Canvas 编码）
   function canvasCompress(item, settings) {
-    return loadImage(item.file).then(function (img) {
+    return loadImage(item.file, true).then(function (img) {
       var target = Utils.computeTargetSize(img.naturalWidth, img.naturalHeight, settings.maxDim);
       var canvas = document.createElement("canvas");
       canvas.width = target.width;
@@ -420,18 +422,7 @@
   var renderCollageTimer = null;
 
   function loadBlobImage(blob) {
-    return new Promise(function (resolve, reject) {
-      var url = URL.createObjectURL(blob);
-      var img = new Image();
-      img.onload = function () {
-        resolve(img);
-      };
-      img.onerror = function () {
-        URL.revokeObjectURL(url);
-        reject(new Error("解码失败"));
-      };
-      img.src = url;
-    });
+    return loadImage(blob, true);
   }
 
   function scheduleCollageRender() {

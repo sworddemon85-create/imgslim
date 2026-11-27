@@ -31,6 +31,8 @@ function app() {
       set innerHTML(value) { this.children = []; },
       querySelector() { return element(); },
       querySelectorAll() { return []; },
+      showModal() { this.open = true; },
+      getContext() { return { drawImage() {}, fillRect() {} }; },
     };
   }
   function get(id) {
@@ -47,6 +49,7 @@ function app() {
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../js/app.js"), "utf8"), {
     window: {
       ImgSlimUtils: Utils,
+      ImgSlimCollage: require("../js/collage.js"),
       ImgSlimI18n: { t: key => key, applyStatic() {}, toggleLabel: () => "EN" },
     },
     document: {
@@ -197,4 +200,40 @@ test("active backend failures still fall back to Canvas compression", async () =
   assert.equal(ui.encodes.length, 1);
   await ui.complete(0, { type: "image/png", size: 40 });
   assert.equal(ui.get("results").children[0].className, "card status-done");
+});
+
+test("recompression releases decode URLs while keeping the current downloadable output", async () => {
+  const ui = app();
+  await ui.add();
+  await ui.complete(0, { type: "image/png", size: 70 });
+  ui.changeQuality(0.4);
+  await ui.debounce();
+  const latest = { type: "image/png", size: 40 };
+  await ui.complete(1, latest);
+  const live = ui.urls.filter(entry => !ui.revoked.includes(entry.url));
+  assert.equal(live.length, 1);
+  assert.equal(live[0].blob, latest);
+  ui.get("clear-all").fire("click");
+  assert.equal(ui.urls.filter(entry => !ui.revoked.includes(entry.url)).length, 0);
+});
+
+test("encoding failure does not retain its successful decode URL", async () => {
+  const ui = app();
+  await ui.add();
+  await ui.complete(0, null);
+  assert.equal(ui.get("results").children[0].className, "card status-error");
+  assert.equal(ui.urls.filter(entry => !ui.revoked.includes(entry.url)).length, 0);
+});
+
+test("repeated collage rendering releases temporary URLs without revoking output previews", async () => {
+  const ui = app();
+  await ui.add();
+  const output = { type: "image/png", size: 40 };
+  await ui.complete(0, output);
+  const preview = ui.urls.find(entry => entry.blob === output).url;
+  for (let i = 0; i < 3; i++) {
+    ui.get("collage-btn").fire("click");
+    await ui.settle();
+  }
+  assert.deepEqual(ui.urls.filter(entry => !ui.revoked.includes(entry.url)).map(entry => entry.url), [preview]);
 });
