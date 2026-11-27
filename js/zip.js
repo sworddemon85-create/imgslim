@@ -91,16 +91,18 @@
       record.setUint16(6, 20, true); // version needed
       record.setUint16(8, 0x0800, true);
       record.setUint16(10, 0, true);
-      record.setUint16(12, DOS_DATE, true);
-      record.setUint32(14, entry.crc, true);
-      record.setUint32(18, entry.size, true);
-      record.setUint32(22, entry.size, true);
-      record.setUint16(26, entry.name.length, true);
-      record.setUint16(28, 0, true);
-      record.setUint16(30, 0, true);
-      record.setUint16(32, 0, true);
-      record.setUint16(34, 0, true);
-      record.setUint32(38, entry.offset, true); // local header offset
+      record.setUint16(12, 0, true); // modification time
+      record.setUint16(14, DOS_DATE, true);
+      record.setUint32(16, entry.crc, true);
+      record.setUint32(20, entry.size, true);
+      record.setUint32(24, entry.size, true);
+      record.setUint16(28, entry.name.length, true);
+      record.setUint16(30, 0, true); // extra field length
+      record.setUint16(32, 0, true); // comment length
+      record.setUint16(34, 0, true); // start disk
+      record.setUint16(36, 0, true); // internal attributes
+      record.setUint32(38, 0, true); // external attributes
+      record.setUint32(42, entry.offset, true); // local header offset
 
       chunks.push(new Uint8Array(record.buffer), entry.name);
       centralSize += 46 + entry.name.length;
