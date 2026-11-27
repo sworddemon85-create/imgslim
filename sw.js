@@ -17,10 +17,14 @@ var ASSETS = [
   "./manifest.webmanifest",
 ];
 
+// CacheStorage 由同源应用共享；作用域用于区分同域名下的不同安装。
+var CACHE_PREFIX = "imgslim:" + encodeURIComponent(self.registration.scope) + ":";
+var CURRENT_CACHE = CACHE_PREFIX + CACHE;
+
 self.addEventListener("install", function (event) {
   event.waitUntil(
     caches
-      .open(CACHE)
+      .open(CURRENT_CACHE)
       .then(function (cache) {
         return cache.addAll(ASSETS);
       })
@@ -38,7 +42,7 @@ self.addEventListener("activate", function (event) {
         return Promise.all(
           keys
             .filter(function (key) {
-              return key !== CACHE;
+              return key.startsWith(CACHE_PREFIX) && key !== CURRENT_CACHE;
             })
             .map(function (key) {
               return caches.delete(key);
@@ -54,12 +58,12 @@ self.addEventListener("activate", function (event) {
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then(function (hit) {
+    caches.match(event.request, { cacheName: CURRENT_CACHE, ignoreSearch: true }).then(function (hit) {
       if (hit) return hit;
       return fetch(event.request).then(function (response) {
         if (response.ok && new URL(event.request.url).origin === self.location.origin) {
           var copy = response.clone();
-          caches.open(CACHE).then(function (cache) {
+          caches.open(CURRENT_CACHE).then(function (cache) {
             cache.put(event.request, copy);
           });
         }
