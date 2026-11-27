@@ -19,6 +19,7 @@
   var state = {
     items: [], // { id, file, status, blob, url, thumbUrl, width, height, error }
     nextId: 1,
+    revision: 0,
   };
 
   var el = {
@@ -173,10 +174,11 @@
     });
   }
 
-  function compressItem(item, settings) {
+  function compressItem(item, settings, revision) {
     var useBackend = el.backendToggle.classList.contains("active");
     var work = useBackend
       ? backendCompress(item, settings).catch(function (err) {
+          if (revision !== state.revision) return;
           toast(I18n.t("backendFail"));
           return canvasCompress(item, settings);
         })
@@ -184,6 +186,7 @@
 
     return work
       .then(function (out) {
+        if (revision !== state.revision) return;
         if (item.url) URL.revokeObjectURL(item.url);
         item.blob = out.blob;
         item.url = URL.createObjectURL(out.blob);
@@ -195,28 +198,35 @@
         item.error = null;
       })
       .catch(function (err) {
+        if (revision !== state.revision) return;
         item.status = "error";
         item.error = err.message || "处理失败";
       });
   }
 
   function refreshAll() {
+    var revision = ++state.revision;
     var settings = currentSettings();
     var chain = Promise.resolve();
     state.items.forEach(function (item) {
       chain = chain.then(function () {
+        if (revision !== state.revision) return;
         item.status = "working";
         render();
-        return compressItem(item, settings);
+        return compressItem(item, settings, revision);
       });
     });
-    chain.then(render);
+    chain.then(function () {
+      if (revision === state.revision) render();
+    });
   }
 
   var reschedule = (function () {
     var timer = null;
     return function () {
       if (!state.items.length) return;
+      // 参数变化后立即废弃旧任务，不等待防抖计时器触发。
+      state.revision += 1;
       clearTimeout(timer);
       timer = setTimeout(refreshAll, RESPRUSH_DELAY);
     };
@@ -588,6 +598,7 @@
   }
 
   function clearAll() {
+    state.revision += 1;
     state.items.forEach(function (item) {
       if (item.url) URL.revokeObjectURL(item.url);
     });
