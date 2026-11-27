@@ -19,6 +19,7 @@
   var state = {
     items: [], // { id, file, status, blob, url, thumbUrl, width, height, error }
     nextId: 1,
+    revision: 0,
   };
 
   var el = {
@@ -96,11 +97,13 @@
     return dot > 0 ? name.slice(0, dot) : name;
   }
 
-  function loadImage(file) {
+  function loadImage(file, temporary) {
     return new Promise(function (resolve, reject) {
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function () {
+        // Canvas 使用已解码的像素，不再需要临时 URL；可交互预览仍保留它。
+        if (temporary) URL.revokeObjectURL(url);
         resolve(img);
       };
       img.onerror = function () {
@@ -128,7 +131,7 @@
 
   // 浏览器本地压缩（Canvas 编码）
   function canvasCompress(item, settings) {
-    return loadImage(item.file).then(function (img) {
+    return loadImage(item.file, true).then(function (img) {
       var target = Utils.computeTargetSize(img.naturalWidth, img.naturalHeight, settings.maxDim);
       var canvas = document.createElement("canvas");
       canvas.width = target.width;
@@ -173,10 +176,11 @@
     });
   }
 
-  function compressItem(item, settings) {
+  function compressItem(item, settings, revision) {
     var useBackend = el.backendToggle.classList.contains("active");
     var work = useBackend
       ? backendCompress(item, settings).catch(function (err) {
+          if (revision !== state.revision) return;
           toast(I18n.t("backendFail"));
           return canvasCompress(item, settings);
         })
@@ -184,6 +188,7 @@
 
     return work
       .then(function (out) {
+        if (revision !== state.revision) return;
         if (item.url) URL.revokeObjectURL(item.url);
         item.blob = out.blob;
         item.url = URL.createObjectURL(out.blob);
@@ -195,28 +200,35 @@
         item.error = null;
       })
       .catch(function (err) {
+        if (revision !== state.revision) return;
         item.status = "error";
         item.error = err.message || "处理失败";
       });
   }
 
   function refreshAll() {
+    var revision = ++state.revision;
     var settings = currentSettings();
     var chain = Promise.resolve();
     state.items.forEach(function (item) {
       chain = chain.then(function () {
+        if (revision !== state.revision) return;
         item.status = "working";
         render();
-        return compressItem(item, settings);
+        return compressItem(item, settings, revision);
       });
     });
-    chain.then(render);
+    chain.then(function () {
+      if (revision === state.revision) render();
+    });
   }
 
   var reschedule = (function () {
     var timer = null;
     return function () {
       if (!state.items.length) return;
+      // 参数变化后立即废弃旧任务，不等待防抖计时器触发。
+      state.revision += 1;
       clearTimeout(timer);
       timer = setTimeout(refreshAll, RESPRUSH_DELAY);
     };
@@ -410,18 +422,7 @@
   var renderCollageTimer = null;
 
   function loadBlobImage(blob) {
-    return new Promise(function (resolve, reject) {
-      var url = URL.createObjectURL(blob);
-      var img = new Image();
-      img.onload = function () {
-        resolve(img);
-      };
-      img.onerror = function () {
-        URL.revokeObjectURL(url);
-        reject(new Error("解码失败"));
-      };
-      img.src = url;
-    });
+    return loadImage(blob, true);
   }
 
   function scheduleCollageRender() {
@@ -588,6 +589,7 @@
   }
 
   function clearAll() {
+    state.revision += 1;
     state.items.forEach(function (item) {
       if (item.url) URL.revokeObjectURL(item.url);
     });

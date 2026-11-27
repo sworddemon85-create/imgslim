@@ -2,7 +2,7 @@
  * imgslim Service Worker：缓存应用外壳，安装后可完全离线使用。
  * 版本号递增即可触发旧缓存清理。
  */
-var CACHE = "imgslim-v5";
+var CACHE = "imgslim-v6-compression";
 var ASSETS = [
   "./",
   "./index.html",
