@@ -23,28 +23,46 @@ const MIME = {
   ".txt": "text/plain; charset=utf-8",
 };
 
-const server = http.createServer((req, res) => {
-  const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
-  let filePath = path.normalize(path.join(ROOT, urlPath));
-
-  if (!filePath.startsWith(ROOT)) {
-    res.writeHead(403).end("Forbidden");
-    return;
-  }
-  if (urlPath.endsWith("/")) {
-    filePath = path.join(filePath, "index.html");
-  }
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("404 Not Found");
+function createServer(root = ROOT) {
+  root = path.resolve(root);
+  return http.createServer((req, res) => {
+    let urlPath;
+    try {
+      urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    } catch {
+      res.writeHead(400).end("Bad Request");
       return;
     }
-    res.writeHead(200, { "Content-Type": MIME[path.extname(filePath).toLowerCase()] || "application/octet-stream" });
-    res.end(data);
-  });
-});
+    if (urlPath.includes("\0")) {
+      res.writeHead(400).end("Bad Request");
+      return;
+    }
 
-server.listen(PORT, () => {
-  console.log(`imgslim 已启动: http://localhost:${PORT}`);
-});
+    let filePath = path.join(root, urlPath);
+    const relative = path.relative(root, filePath);
+    if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      res.writeHead(403).end("Forbidden");
+      return;
+    }
+    if (urlPath.endsWith("/")) {
+      filePath = path.join(filePath, "index.html");
+    }
+
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("404 Not Found");
+        return;
+      }
+      res.writeHead(200, { "Content-Type": MIME[path.extname(filePath).toLowerCase()] || "application/octet-stream" });
+      res.end(data);
+    });
+  });
+}
+
+if (require.main === module) {
+  createServer().listen(PORT, () => {
+    console.log(`imgslim 已启动: http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { createServer };
